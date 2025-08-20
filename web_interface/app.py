@@ -20,7 +20,7 @@ current_speakers = []
 
 def load_speaker_config():
     """Load speaker configuration from config file"""
-    config_path = Path('../end_to_end/speaker_dict.json')
+    config_path = Path('data/speaker_dict.json')
     if config_path.exists():
         with open(config_path, 'r') as f:
             speaker_data = json.load(f)
@@ -140,6 +140,7 @@ def load_segments():
                     'start_time': float(segment['start']),
                     'end_time': float(segment['end']),
                     'text': segment.get('text', ''),
+                    'original_text': segment.get('text', ''),  # Store original text for comparison
                     'speaker': '',  # Will be filled by user
                     'notes': f"Loaded from {os.path.basename(segments_file_path)}"
                 }
@@ -203,6 +204,38 @@ def update_segment_speaker():
         'segment': next(s for s in current_segments if s['id'] == segment_id)
     })
 
+@app.route('/update_segment_text', methods=['POST'])
+def update_segment_text():
+    """Update the text content for a specific segment"""
+    global current_segments
+    
+    if not current_video:
+        return jsonify({'error': 'No video loaded'}), 400
+    
+    data = request.get_json()
+    segment_id = data.get('segment_id')
+    text = data.get('text', '').strip()
+    
+    if not segment_id:
+        return jsonify({'error': 'No segment ID provided'}), 400
+    
+    # Find and update the segment
+    segment_found = False
+    for segment in current_segments:
+        if segment['id'] == segment_id:
+            segment['text'] = text
+            segment_found = True
+            break
+    
+    if not segment_found:
+        return jsonify({'error': 'Segment not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'message': f'Segment text updated successfully',
+        'segment': next(s for s in current_segments if s['id'] == segment_id)
+    })
+
 @app.route('/add_custom_speaker', methods=['POST'])
 def add_custom_speaker():
     """Add a custom speaker label to the configuration"""
@@ -230,7 +263,7 @@ def add_custom_speaker():
         speakers.append(new_speaker)
         
         # Save updated config
-        config_path = os.path.join('..', 'end_to_end', 'speaker_dict.json')
+        config_path = os.path.join('data', 'speaker_dict.json')
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(speakers, f, indent=2, ensure_ascii=False)
         

@@ -709,7 +709,19 @@ function displaySegments() {
                             </button>
                         </div>
                     </div>
-                    ${segment.text ? `<div class="row mt-2"><div class="col-12"><small class="text-muted"><em>"${segment.text}"</em></small></div></div>` : ''}
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0"><small class="text-muted">Segment Text:</small></label>
+                                ${segment.text && segment.text !== segment.original_text ? 
+                                    '<span class="badge bg-warning text-dark"><small>Modified</small></span>' : ''}
+                            </div>
+                            <textarea class="form-control form-control-sm" 
+                                      rows="2" 
+                                      placeholder="Enter or edit segment text..."
+                                      onchange="updateSegmentText('${segment.id}', this.value)">${segment.text || ''}</textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -820,6 +832,37 @@ async function updateSegmentSpeaker(segmentId, speaker) {
     } catch (error) {
         console.error('Error updating segment speaker:', error);
         showAlert('Failed to update speaker. Please try again.', 'danger');
+    }
+}
+
+async function updateSegmentText(segmentId, text) {
+    try {
+        const response = await fetch('/update_segment_text', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                segment_id: segmentId,
+                text: text
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Update the segment in our local array
+            const segment = currentSegments.find(s => s.id === segmentId);
+            if (segment) {
+                segment.text = text;
+            }
+            showAlert(result.message, 'success');
+        } else {
+            showAlert(result.error || 'Failed to update segment text', 'danger');
+        }
+    } catch (error) {
+        console.error('Error updating segment text:', error);
+        showAlert('Failed to update segment text. Please try again.', 'danger');
     }
 }
 
